@@ -177,7 +177,9 @@ def cac_vs_value_chart(econ: pd.DataFrame, cut: str, scale: str) -> go.Figure:
     return _layout(fig, title, subtitle, height=480)
 
 
-def roi_chart(econ: pd.DataFrame, sensitivity: pd.DataFrame, cut: str, scale: str) -> go.Figure:
+def roi_chart(
+    econ: pd.DataFrame, sensitivity: pd.DataFrame, cut: str, scale: str, margin: float
+) -> go.Figure:
     """90-day ROI by channel at base spend, whiskers = spend x0.5 .. x1.5."""
     df = econ[econ["spend"] > 0].sort_values("roi_90d").copy()
     wide = sensitivity.pivot(index="channel", columns="multiplier", values="roi_90d")
@@ -226,7 +228,9 @@ def roi_chart(econ: pd.DataFrame, sensitivity: pd.DataFrame, cut: str, scale: st
             text=f"<b>{roi:+.0%}</b>  <span style='color:{TEXT_2}'>({lo:+.0%} to {hi:+.0%})</span>",
             font={"color": TEXT, "size": 13},
         )
-    fig.update_xaxes(tickformat=".0%", title="90-day ROI = (revenue × 40% margin − spend) ÷ spend")
+    fig.update_xaxes(
+        tickformat=".0%", title=f"90-day ROI = (revenue × {margin:.0%} margin − spend) ÷ spend"
+    )
     e = df.set_index("channel")
     winners = df[(df["roi_worst"] > 0) & df["ranked"]]["channel"].tolist()
     title = (

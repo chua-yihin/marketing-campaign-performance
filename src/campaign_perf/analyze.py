@@ -93,9 +93,9 @@ def main() -> None:
     funnel = funnel_table(cohort, "channel", window, repeat_window, end)
     econ = channel_economics(cohort, cfg, months)
     retention = retention_table(users, "channel", cfg["retention"]["windows_days"], end)
-    funnel.to_csv(TABLES_DIR / "funnel_by_channel.csv", index=False)
-    econ.to_csv(TABLES_DIR / "economics_by_channel.csv", index=False)
-    retention.to_csv(TABLES_DIR / "retention_by_channel.csv", index=False)
+    funnel.to_csv(TABLES_DIR / "funnel_by_channel.csv", index=False, lineterminator="\n")
+    econ.to_csv(TABLES_DIR / "economics_by_channel.csv", index=False, lineterminator="\n")
+    retention.to_csv(TABLES_DIR / "retention_by_channel.csv", index=False, lineterminator="\n")
 
     # Same economics with internal staff traffic left in, to show its effect
     cfg_incl = {**cfg, "internal_traffic": {**cfg["internal_traffic"], "exclude": False}}
@@ -107,8 +107,8 @@ def main() -> None:
     # Cut / scale, reallocation impact and sensitivity
     cut, scale = pick_cut_scale(econ)
     sens_detail, sens_summary = sensitivity(cohort, cfg, months, cut, scale)
-    sens_detail.to_csv(TABLES_DIR / "sensitivity.csv", index=False)
-    sens_summary.to_csv(TABLES_DIR / "sensitivity_summary.csv", index=False)
+    sens_detail.to_csv(TABLES_DIR / "sensitivity.csv", index=False, lineterminator="\n")
+    sens_summary.to_csv(TABLES_DIR / "sensitivity_summary.csv", index=False, lineterminator="\n")
 
     # Impact range: the cut channel's spend and the scale channel's spend (hence its CAC) move
     # in opposite directions, so the range reflects real uncertainty in the assumptions.
@@ -132,7 +132,9 @@ def main() -> None:
                 **impact,
             }
         )
-    pd.DataFrame(impacts).to_csv(TABLES_DIR / "reallocation_impact.csv", index=False)
+    pd.DataFrame(impacts).to_csv(
+        TABLES_DIR / "reallocation_impact.csv", index=False, lineterminator="\n"
+    )
 
     # Top campaigns by new users (full-window cohort for funnel/economics)
     top = cohort["campaign"].value_counts().head(TOP_CAMPAIGNS).index
@@ -144,10 +146,10 @@ def main() -> None:
     )
     economics_table(camp, spend[camp.index], "campaign", window, margin).sort_values(
         "new_users", ascending=False
-    ).to_csv(TABLES_DIR / "economics_by_campaign.csv", index=False)
+    ).to_csv(TABLES_DIR / "economics_by_campaign.csv", index=False, lineterminator="\n")
     retention_table(
         camp_users, "campaign", cfg["retention"]["windows_days"], end, "All top campaigns"
-    ).to_csv(TABLES_DIR / "retention_by_campaign.csv", index=False)
+    ).to_csv(TABLES_DIR / "retention_by_campaign.csv", index=False, lineterminator="\n")
 
     print(f"Cut: {cut} | Scale: {scale}")
     print(

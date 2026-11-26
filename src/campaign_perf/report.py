@@ -119,7 +119,7 @@ def economics_view(econ: pd.DataFrame) -> pd.DataFrame:
             "90-day revenue / user": e["revenue_per_user_90d"].map(lambda v: money(v, 2)),
             "ROI (90 d)": e["roi_90d"].map(lambda v: f"{v:+.0%}" if pd.notna(v) else "–"),
             "LTV:CAC": e["ltv_to_cac"].map(lambda v: f"{v:.2f}" if pd.notna(v) else "–"),
-            "Ranked": e["ranked"].map({True: "yes", False: "no"}),
+            "Ranked (≥30 buyers)": e["ranked"].map({True: "yes", False: "no"}),
         }
     )
 
@@ -196,13 +196,23 @@ def build_dashboard(t: dict[str, pd.DataFrame], cfg: dict, f: dict) -> tuple[str
     figs = {
         "funnel": charts.funnel_chart(t["funnel_by_channel"], cut, scale),
         "cac_vs_value": charts.cac_vs_value_chart(t["economics_by_channel"], cut, scale),
-        "roi": charts.roi_chart(t["economics_by_channel"], t["sensitivity"], cut, scale),
+        "roi": charts.roi_chart(
+            t["economics_by_channel"],
+            t["sensitivity"],
+            cut,
+            scale,
+            cfg["economics"]["gross_margin"],
+        ),
         "retention": charts.retention_chart(t["retention_by_channel"], cut, scale),
     }
     config = {"displaylogo": False, "responsive": True}
     html = {}
     for i, (key, fig) in enumerate(figs.items()):
-        html[key] = Markup(fig.to_html(full_html=False, include_plotlyjs=(i == 0), config=config))
+        html[key] = Markup(
+            fig.to_html(
+                full_html=False, include_plotlyjs=(i == 0), config=config, div_id=f"fig-{key}"
+            )
+        )
 
     headline = (
         f"Cut {cut}, scale {scale}: about {money_k(f['net_profit'])} in 90-day profit "
@@ -233,9 +243,10 @@ def build_dashboard(t: dict[str, pd.DataFrame], cfg: dict, f: dict) -> tuple[str
             "note": f"{scale} vs {cut}; average {f['avg_ret90']:.1%}",
         },
         {
-            "label": "Recommendation holds",
-            "value": f"{f['scenarios_hold']} of {f['scenarios_total']}",
-            "note": "spend sensitivity scenarios (±50%)",
+            "label": f"Cut {cut} holds",
+            "value": f"{f['scenarios_cut_hold']} of {f['scenarios_total']}",
+            "note": f"spend scenarios (±50%). Scale {scale}: {f['scenarios_hold']} of "
+            f"{f['scenarios_total']}; else {' / '.join(f['flip_alternative'])}",
         },
     ]
     chart_blocks = [
@@ -358,12 +369,12 @@ def main() -> None:
         days=cfg["economics"]["revenue_window_days"]
     )
     memo = build_memo(t, cfg, f, months_between(start, last_first))
-    (REPORTS_DIR / "memo.md").write_text(memo, encoding="utf-8")
+    (REPORTS_DIR / "memo.md").write_text(memo, encoding="utf-8", newline="\n")
     words = len(memo.split())
     print(f"Wrote {REPORTS_DIR / 'memo.md'} ({words} words)")
     page, figs = build_dashboard(t, cfg, f)
     DOCS_DIR.mkdir(parents=True, exist_ok=True)
-    (DOCS_DIR / "index.html").write_text(page, encoding="utf-8")
+    (DOCS_DIR / "index.html").write_text(page, encoding="utf-8", newline="\n")
     print(f"Wrote {DOCS_DIR / 'index.html'}")
     try:
         export_pngs(figs)

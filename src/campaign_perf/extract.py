@@ -65,12 +65,12 @@ def main() -> None:
         frames[sql_name] = df
 
     validation, nbytes = run_query(render_sql("05_validation.sql", cfg), "05_validation", cfg)
-    validation.to_csv(TABLES_DIR / "validation_source_totals.csv", index=False)
+    validation.to_csv(TABLES_DIR / "validation_source_totals.csv", index=False, lineterminator="\n")
     log.append({"query": "05_validation.sql", "gb_processed": nbytes / GB, "rows": len(validation)})
-    pd.DataFrame(log).to_csv(TABLES_DIR / "extract_bytes.csv", index=False)
+    pd.DataFrame(log).to_csv(TABLES_DIR / "extract_bytes.csv", index=False, lineterminator="\n")
 
     rec = reconcile(frames["01_user_first_touch.sql"], validation)
-    rec.to_csv(TABLES_DIR / "reconciliation.csv", index=False)
+    rec.to_csv(TABLES_DIR / "reconciliation.csv", index=False, lineterminator="\n")
     print(rec.to_string(index=False))
     if not rec["ok"].all():
         raise SystemExit("Reconciliation failed: extract totals differ from source by > 0.5%")
