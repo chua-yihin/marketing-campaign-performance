@@ -1,0 +1,78 @@
+# Every assumption the analysis depends on lives here. Change a value, then rerun `make all`.
+# Nothing in src/ may hard-code any of these numbers.
+
+data:
+  source: bigquery-public-data.google_analytics_sample.ga_sessions_*
+  start_date: "2016-08-01"   # first table suffix 20160801
+  end_date: "2017-08-01"     # last table suffix 20170801 (inclusive); censoring reference date
+  billing_project: campaign-project-515906
+  max_bytes_per_query_gb: 20  # dry run must come in under this, and maximum_bytes_billed is set to it
+
+internal_traffic:
+  # Google Merchandise Store staff traffic arrives as channel Referral with source "(direct)" /
+  # medium "(none)" (internal mall.googleplex referrals). It converts at ~11% vs ~0.5% for every
+  # other referrer. Users acquired this way are excluded from cohorts; results are also reported
+  # with them included so the effect is visible.
+  exclude: true
+  rules:
+    - channel: Referral
+      source: "(direct)"
+      medium: "(none)"
+
+funnel:
+  # Sign-up definition is decided by the registration-page probe in Phase 2.
+  # "register_success" -> first hit on a registration-success page
+  # "add_to_cart"      -> first hit with eCommerceAction.action_type = '3', labelled "Engaged (add to cart)"
+  signup_definition: register_success   # probe: 2.2% of users hit /registersuccess.html (>= 1%)
+  signup_min_user_share: 0.01   # below this share of users, fall back to add_to_cart
+  repeat_window_days: 90        # second transaction session within N days of the first
+
+retention:
+  windows_days: [30, 60, 90]    # retained at N = any session on days 1..N after first visit
+
+economics:
+  gross_margin: 0.40
+  revenue_window_days: 90       # cohort revenue counted on days 0..N after first visit
+  min_purchasers_to_rank: 30    # channels with fewer first-time purchasers are flagged, not ranked
+  sensitivity_multipliers: [0.5, 1.0, 1.5]   # every channel's spend at -50%, base, +50%
+  scale_marginal_cac_penalty: 0.30            # scaled channel's marginal CAC is 30% worse than its average
+
+# Spend is ASSUMED: the GA sample has no cost data.
+# Models:
+#   per_session:          cost_per_session x new users (first sessions) acquired by the channel
+#   revenue_share:        revenue_share x 90-day cohort revenue + cost_per_session x new users
+#   fixed_monthly:        monthly_cost x months in the acquisition window
+#   none:                 $0 spend
+# rank: false keeps the channel out of the cut/scale ranking.
+channels:
+  Paid Search:
+    model: per_session
+    cost_per_session: 1.50
+    rank: true
+  Display:
+    model: per_session
+    cost_per_session: 0.80
+    rank: true
+  Affiliates:
+    model: revenue_share
+    revenue_share: 0.10
+    cost_per_session: 0.20
+    rank: true
+  Social:
+    model: per_session
+    cost_per_session: 0.60
+    rank: true
+  Organic Search:
+    model: fixed_monthly
+    monthly_cost: 3000
+    rank: true
+  Referral:
+    model: fixed_monthly
+    monthly_cost: 1500
+    rank: true
+  Direct:
+    model: none
+    rank: false   # brand traffic, not attributable
+  (Other):
+    model: none
+    rank: false   # too small to judge

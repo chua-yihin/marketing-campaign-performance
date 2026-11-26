@@ -1,0 +1,32 @@
+# Python / env
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# Secrets and credentials: never commit
+.env
+.env.*
+*credentials*.json
+*service-account*.json
+*-key.json
+application_default_credentials.json
+*.pem
+
+# Raw dumps (only small processed extracts are committed)
+data/raw/
+*.csv.gz
+*.jsonl
+
+# Notebooks / OS / editors
+.ipynb_checkpoints/
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+.pytest_tmp/
