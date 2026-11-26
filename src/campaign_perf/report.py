@@ -360,10 +360,45 @@ def build_memo(t: dict[str, pd.DataFrame], cfg: dict, f: dict, months: float) ->
     return env.get_template("memo.md.j2").render(**values)
 
 
+def markdown_table(df: pd.DataFrame) -> str:
+    cols = list(df.columns)
+    lines = ["| " + " | ".join(cols) + " |", "| " + " | ".join("---" for _ in cols) + " |"]
+    lines += ["| " + " | ".join(str(v) for v in row) + " |" for row in df.itertuples(index=False)]
+    return "\n".join(lines)
+
+
+def build_readme(cfg: dict, f: dict) -> str:
+    """Render README.md; the headline numbers come from `facts`, i.e. from the CSV tables."""
+    econ = pd.read_csv(TABLES_DIR / "economics_by_channel.csv").set_index("channel")
+    incl = pd.read_csv(TABLES_DIR / "economics_by_channel_incl_internal.csv").set_index("channel")
+    values = {
+        "period": f"{cfg['data']['start_date']} to {cfg['data']['end_date']}",
+        "cut": f["cut"],
+        "scale": f["scale"],
+        "net_profit": money_k(f["net_profit"]),
+        "net_profit_low": money_k(f["net_profit_low"]),
+        "net_profit_high": money_k(f["net_profit_high"]),
+        "cut_spend_share": f"{f['cut_spend_share']:.0%}",
+        "cut_cac": money(f["cut_cac"]),
+        "scale_cac": money(f["scale_cac"]),
+        "scenarios_cut_hold": f["scenarios_cut_hold"],
+        "scenarios_total": f["scenarios_total"],
+        "referral_incl_roi": f"{incl.loc['Referral', 'roi_90d']:+.0%}",
+        "referral_roi": f"{econ.loc['Referral', 'roi_90d']:+.0%}",
+        "assumptions_table": markdown_table(assumptions_view(cfg)),
+    }
+    env = Environment(
+        loader=FileSystemLoader(TEMPLATES), autoescape=False, keep_trailing_newline=True
+    )
+    return env.get_template("README.md.j2").render(**values)
+
+
 def main() -> None:
     cfg = load_config()
     t = load_tables()
     f = facts(t)
+    (ROOT / "README.md").write_text(build_readme(cfg, f), encoding="utf-8", newline="\n")
+    print(f"Wrote {ROOT / 'README.md'}")
     start = pd.Timestamp(cfg["data"]["start_date"])
     last_first = pd.Timestamp(cfg["data"]["end_date"]) - pd.Timedelta(
         days=cfg["economics"]["revenue_window_days"]
