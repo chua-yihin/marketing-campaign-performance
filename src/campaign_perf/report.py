@@ -12,9 +12,11 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from markupsafe import Markup
 
 from campaign_perf import charts
-from campaign_perf.config import DOCS_DIR, FIGURES_DIR, TABLES_DIR, load_config
+from campaign_perf.config import DOCS_DIR, FIGURES_DIR, ROOT, TABLES_DIR, load_config
+from campaign_perf.economics import months_between
 
 TEMPLATES = Path(__file__).parent / "templates"
+REPORTS_DIR = ROOT / "reports"
 
 
 def load_tables(tables_dir: Path = TABLES_DIR) -> dict[str, pd.DataFrame]:
@@ -86,6 +88,11 @@ def facts(t: dict[str, pd.DataFrame]) -> dict:
         "net_profit_high": high["net_profit_change_90d"],
         "net_gross_profit_low": low["net_gross_profit_90d"],
         "net_gross_profit_high": high["net_gross_profit_90d"],
+        # Break-evens: what the assumptions would have to be for the verdict to flip
+        "cut_cost_per_user": econ.loc[cut, "cost_per_new_user"],
+        "cut_breakeven_cost_per_user": econ.loc[cut, "gross_profit_90d"]
+        / econ.loc[cut, "new_users"],
+        "scale_breakeven_cac": econ.loc[scale, "gross_profit_90d"] / econ.loc[scale, "purchasers"],
         "scenarios_total": len(sens),
         "scenarios_hold": int(sens["recommendation_holds"].sum()),
         "scenarios_cut_hold": int(sens["same_cut"].sum()),
@@ -279,10 +286,81 @@ def export_pngs(figs: dict, out_dir: Path = FIGURES_DIR) -> None:
         fig.write_image(out_dir / f"{name}.png", width=1100, height=fig.layout.height, scale=2)
 
 
+def build_memo(t: dict[str, pd.DataFrame], cfg: dict, f: dict, months: float) -> str:
+    """Render reports/memo.md. Every number comes from `facts`, i.e. from the CSV tables."""
+
+    def signed(x: float, digits: int = 0) -> str:
+        return f"{'+' if x >= 0 else '−'}{abs(x):,.{digits}f}"
+
+    def signed_money(x: float) -> str:
+        return f"{'+' if x >= 0 else '−'}${abs(x):,.0f}"
+
+    flips = f["flip_alternative"]
+    values = {
+        "period": f"{cfg['data']['start_date']} to {cfg['data']['end_date']}",
+        "cut": f["cut"],
+        "scale": f["scale"],
+        "net_profit": money_k(f["net_profit"]),
+        "net_profit_low": money_k(f["net_profit_low"]),
+        "net_profit_high": money_k(f["net_profit_high"]),
+        "cut_cac": money(f["cut_cac"]),
+        "scale_cac": money(f["scale_cac"]),
+        "avg_cac": money(f["ranked_avg_cac"]),
+        "cut_spend_share": f"{f['cut_spend_share']:.0%}",
+        "cut_spend": money(f["cut_spend"]),
+        "cut_purchasers": f"{f['cut_purchasers']:,}",
+        "cut_new_users": f"{f['cut_new_users']:,}",
+        "cut_roi": f"{f['cut_roi']:+.0%}",
+        "scale_roi": f"{f['scale_roi']:+.0%}",
+        "avg_roi": f"{f['ranked_avg_roi']:+.0%}",
+        "cut_purchase_rate": f"{f['cut_purchase_rate']:.2%}",
+        "scale_purchase_rate": f"{f['scale_purchase_rate']:.1%}",
+        "avg_purchase_rate": f"{f['avg_purchase_rate']:.2%}",
+        "scale_ret90": f"{f['scale_ret90']:.1%}",
+        "cut_ret90": f"{f['cut_ret90']:.1%}",
+        "avg_ret90": f"{f['avg_ret90']:.1%}",
+        "spend_moved": money(f["spend_moved"]),
+        "spend_banked": money(f["spend_banked"]),
+        "scale_marginal_cac": money(
+            f["scale_cac"] * (1 + cfg["economics"]["scale_marginal_cac_penalty"])
+        ),
+        "gained_purchasers": f"{f['gained_purchasers']:,.0f}",
+        "lost_purchasers": f"{f['lost_purchasers']:,.0f}",
+        "net_purchasers": signed(f["net_purchasers"]),
+        "gained_revenue": money(f["gained_revenue"]),
+        "lost_revenue": money(f["lost_revenue"]),
+        "net_revenue": signed_money(f["net_revenue"]),
+        "net_gross_profit": signed_money(f["net_gross_profit"]),
+        "scale_new_users": f"{f['scale_new_users']:,}",
+        "scale_purchasers": f"{f['scale_purchasers']:,}",
+        "scenarios_total": f["scenarios_total"],
+        "scenarios_hold": f["scenarios_hold"],
+        "scenarios_flip": f["scenarios_total"] - f["scenarios_hold"],
+        "flip_alternative": " or ".join(flips) if flips else "no other channel",
+        "cut_cost_per_user": money(f["cut_cost_per_user"], 2),
+        "cut_breakeven": f"${f['cut_breakeven_cost_per_user']:.3f}",
+        "cut_breakeven_ratio": f"{f['cut_cost_per_user'] / f['cut_breakeven_cost_per_user']:,.0f}",
+        "scale_breakeven_cac": money(f["scale_breakeven_cac"]),
+        "cut_purchasers_4wk": f"{f['cut_purchasers'] * (4 * 7) / (months * 365.25 / 12):,.0f}",
+    }
+    env = Environment(
+        loader=FileSystemLoader(TEMPLATES), autoescape=False, keep_trailing_newline=True
+    )
+    return env.get_template("memo.md.j2").render(**values)
+
+
 def main() -> None:
     cfg = load_config()
     t = load_tables()
     f = facts(t)
+    start = pd.Timestamp(cfg["data"]["start_date"])
+    last_first = pd.Timestamp(cfg["data"]["end_date"]) - pd.Timedelta(
+        days=cfg["economics"]["revenue_window_days"]
+    )
+    memo = build_memo(t, cfg, f, months_between(start, last_first))
+    (REPORTS_DIR / "memo.md").write_text(memo, encoding="utf-8")
+    words = len(memo.split())
+    print(f"Wrote {REPORTS_DIR / 'memo.md'} ({words} words)")
     page, figs = build_dashboard(t, cfg, f)
     DOCS_DIR.mkdir(parents=True, exist_ok=True)
     (DOCS_DIR / "index.html").write_text(page, encoding="utf-8")
