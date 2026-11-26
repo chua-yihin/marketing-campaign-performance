@@ -1,0 +1,6 @@
+query,gb_processed,rows
+01_user_first_touch.sql,0.08214693982154131,714167
+02_user_milestones.sql,0.16900991555303335,701500
+03_user_activity_days.sql,0.04627178516238928,701500
+04_cohort_revenue.sql,0.046357578597962856,9063
+05_validation.sql,0.02447617519646883,1

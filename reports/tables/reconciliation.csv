@@ -1,0 +1,5 @@
+metric,source_sql,parquet,rel_diff,ok
+sessions,903653.0,903653.0,0.0,True
+users,714167.0,714167.0,0.0,True
+transactions,12115.0,12115.0,0.0,True
+revenue_usd,1540071.24,1540071.2399999998,1.511817360175297e-16,True
