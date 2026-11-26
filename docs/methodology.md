@@ -54,3 +54,30 @@ These 30,394 users are excluded from all cohorts (`internal_traffic` in `config/
 which leaves 671,106 acquired users. Results with them included are reported alongside, so the
 effect is visible. The rule flags the acquiring session only. Staff who first arrived through
 another channel cannot be identified.
+
+## Cohorts used in the analysis
+- **Funnel and economics:** users acquired from 2016-08-01 to 2017-05-03, which is 90 days before
+  the end date, so every user has a full 90-day window (532,168 users, 9.07 months). Fixed monthly
+  spend is charged for those 9.07 months.
+- **Retention:** every acquired user, censored separately at each N.
+- **Repeat purchase:** counted only for purchasers whose first purchase falls at least 90 days
+  before the end date.
+
+## Cut / scale and expected impact
+- Ranked channels need a spend model, at least one purchaser and at least 30 first-time purchasers.
+  Direct and (Other) are never ranked.
+- **Cut** = lowest 90-day ROI among ranked channels. **Scale** = highest.
+- **Reallocation:** all of the cut channel's spend is removed. The scale channel can grow to at
+  most 2x its current spend (`scale_max_multiple`), at a marginal CAC 30% worse than its average.
+  The rest of the cut spend is banked as savings.
+- **Net 90-day profit change** = gross profit gained on the scale channel - gross profit lost on the
+  cut channel + spend banked. Losing all of the cut channel's purchasers is an upper bound on the
+  loss.
+- **Range:** low case = cut channel's spend x0.5 and scale channel's spend x1.5. High case = the
+  reverse.
+- **Sensitivity:** `reports/tables/sensitivity_summary.csv` reruns the cut/scale choice with every
+  channel's spend at x0.5 and x1.5 together, and with each ranked channel's spend changed on its own.
+
+## Campaigns
+The sample has only 8 `trafficSource.campaign` values, and 97% of acquired users are "(not set)".
+Campaign tables are produced for completeness but carry little signal.

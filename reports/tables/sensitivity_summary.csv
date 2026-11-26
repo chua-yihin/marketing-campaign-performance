@@ -1,0 +1,14 @@
+scenario,cut,scale,same_cut,same_scale,recommendation_holds
+all channels x0.5,Social,Display,True,True,True
+all channels x1.0,Social,Display,True,True,True
+all channels x1.5,Social,Display,True,True,True
+Display only x0.5,Social,Display,True,True,True
+Display only x1.5,Social,Organic Search,True,False,False
+Organic Search only x0.5,Social,Organic Search,True,False,False
+Organic Search only x1.5,Social,Display,True,True,True
+Paid Search only x0.5,Social,Display,True,True,True
+Paid Search only x1.5,Social,Display,True,True,True
+Referral only x0.5,Social,Display,True,True,True
+Referral only x1.5,Social,Display,True,True,True
+Social only x0.5,Social,Display,True,True,True
+Social only x1.5,Social,Display,True,True,True

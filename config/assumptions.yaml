@@ -36,6 +36,7 @@ economics:
   min_purchasers_to_rank: 30    # channels with fewer first-time purchasers are flagged, not ranked
   sensitivity_multipliers: [0.5, 1.0, 1.5]   # every channel's spend at -50%, base, +50%
   scale_marginal_cac_penalty: 0.30            # scaled channel's marginal CAC is 30% worse than its average
+  scale_max_multiple: 2.0                     # scaled channel grows to at most 2x its current spend; the rest of the cut spend is banked
 
 # Spend is ASSUMED: the GA sample has no cost data.
 # Models:
