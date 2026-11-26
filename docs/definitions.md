@@ -1,9 +1,9 @@
-# Project rules: marketing-campaign-performance
+# Definitions and conventions: marketing-campaign-performance
 
 End-to-end campaign performance analysis of the Google Analytics 360 sample in BigQuery:
 funnel by acquiring channel, CAC and ROI under assumed spend, 30/60/90-day retention, a
 one-page cut/scale memo and a static dashboard. These definitions are fixed; change them only
-with the owner's agreement, and update `docs/methodology.md` in the same commit.
+with the owner's agreement, and update `docs/methodology.md` and this file in the same commit.
 
 ## Data
 - Source: `bigquery-public-data.google_analytics_sample.ga_sessions_*`, suffixes 20160801..20170801.

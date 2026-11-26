@@ -1,6 +1,6 @@
 # Methodology
 
-Definitions follow [CLAUDE.md](../CLAUDE.md). Every parameter is set in
+Definitions follow [definitions.md](definitions.md). Every parameter is set in
 [config/assumptions.yaml](../config/assumptions.yaml).
 
 ## Data and extraction
